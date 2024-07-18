@@ -29,7 +29,7 @@ class CustomCollatorWithPadding(DataCollatorWithPadding):
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--model_name_or_path', type=str, default='gpt2')
+    parser.add_argument('--model_name_or_path', type=str, default='yuntian-deng/gpt2-explicit-cot-multiplication')
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--output_dir', type=str, default='multiplication/generations')
     parser.add_argument('--max_train_digits', type=int, default=3)

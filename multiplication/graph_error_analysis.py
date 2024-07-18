@@ -211,18 +211,18 @@ def scratchpad_graph_analysis():
         scratchpad_parsing_error = 0
         for item in tqdm(data):
             x, y = extract_numbers(item["question"])
-            generated_answer = item["GPT3 answer"]
+            generated_answer = item["answer"]
             if type(generated_answer) == list:
                 generated_answer = generated_answer[0]
             graph_from_input = build_scratchpad_v2_graph(x, y)
             longest_path, number_of_nodes = compute_depth_graph(graph_from_input, x, y)
             depth_dist[name].append(longest_path)
             try:
-                graph_from_scrathcpad = create_graph(x, y, generated_answer)
+                graph_from_scratchpad = create_graph(x, y, generated_answer)
             except:
                 scratchpad_parsing_error += 1
                 continue
-            stats = compute_node_type(graph_from_scrathcpad, graph_from_input, x, y, generated_answer)
+            stats = compute_node_type(graph_from_scratchpad, graph_from_input, x, y, generated_answer)
 
             width = compute_width(graph_from_input, x, y)
             linear_interp = args.width_coef * width + args.depth_coef * longest_path

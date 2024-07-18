@@ -175,11 +175,11 @@ def main():
 
     for item in data:
         x, y = extract_numbers(item["question"])
-        generated_answer = item["GPT3 answer"]
-
-        if isinstance(generated_answer, (list, tuple)):
-            generated_answer = generated_answer[0]
-            gold_answer = "Let's perform the multiplication step by step:\n\n" + generate_prompt(x, y)[0][:-4]
+        generated_answer = item["answer"]
+        gold_answer = "Let's perform the multiplication step by step:\n\n" + generate_prompt(x, y)[0][:-4]
+        # if isinstance(generated_answer, (list, tuple)):
+            
+            
         graph_from_scrathcpad = create_graph(x, y, generated_answer)
         gold_graph_scrathcpad = create_graph(x, y, gold_answer)
         graph_from_input = build_scratchpad_graph(x, y)

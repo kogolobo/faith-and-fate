@@ -7,8 +7,16 @@ from argparse import ArgumentParser
 from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorWithPadding
 from torch.utils.data import DataLoader
 from transformers.trainer_utils import set_seed
-from data_utils import load_data
+from data_utils import load_data, STOP_TOKEN, create_cot_context, create_shots
 from transformers.generation.configuration_utils import GenerationConfig
+from transformers import StoppingCriteria, StoppingCriteriaList
+
+class StopTokenCriteria(StoppingCriteria):
+    def __init__(self, stop_token_id):
+        self.stop_token_id = stop_token_id
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        return self.stop_token_id in input_ids[0]
 
 class CustomCollatorWithPadding(DataCollatorWithPadding):
     def __call__(self, features):
@@ -45,20 +53,25 @@ def main():
     set_seed(args.seed)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
+    tokenizer.padding_side = 'left'
     if tokenizer.pad_token is None:
-        tokenizer.padding_side = 'left'
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, pad_token_id=tokenizer.eos_token_id).to(args.device)
     
     collator = CustomCollatorWithPadding(tokenizer=tokenizer)
     dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
+    validation_data = dataset['validation']
+    validation_data = validation_data.map(create_shots)
+    shot_bank = validation_data['shot']
+    dataset = dataset['test'].map(create_cot_context, nshots=1, shot_bank=shot_bank)
+    
     def tokenize_function(examples):
-        return tokenizer(examples['question'], padding=False, truncation=True)
+        return tokenizer(examples['context'], padding=False, truncation=True)
     dataset = dataset.map(tokenize_function, batched=True)
 
     dataloader = DataLoader(
-        dataset['test'], 
+        dataset['test'].select(range(50)),
         batch_size=args.batch_size, 
         collate_fn=collator, 
         shuffle=False 
@@ -66,11 +79,13 @@ def main():
 
     model.eval()
     
+    stop_token_id = tokenizer.encode(STOP_TOKEN, add_special_tokens=False)[0]
+    stopping_criteria = StoppingCriteriaList([StopTokenCriteria(stop_token_id)])
     generation_config = GenerationConfig(
         max_new_tokens=args.max_new_tokens,
-        num_beams=args.beam_size,
+        # num_beams=args.beam_size,
         pad_token_id=tokenizer.eos_token_id,
-        do_sample=False 
+        do_sample=False
     )
 
     generated_answers = []
@@ -80,7 +95,7 @@ def main():
             attention_mask = batch.pop('attention_mask').to(args.device)
             text = batch.pop('text') if 'text' in batch else None
             
-            outputs = model.generate(input_ids, attention_mask=attention_mask, generation_config=generation_config)
+            outputs = model.generate(input_ids, attention_mask=attention_mask, generation_config=generation_config, stopping_criteria=stopping_criteria)
             answers = tokenizer.batch_decode(outputs, skip_special_tokens=True)
             batch['answer'] = [answers[i].replace(batch['question'][i], '').strip() for i in range(len(answers))]
             generated_answers.extend(

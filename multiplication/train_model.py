@@ -24,8 +24,8 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
     if tokenizer.pad_token is None:
-        tokenizer.padding_side = 'left'
         tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = 'left'
     dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
     
     def tokenize_function(examples):
@@ -37,7 +37,10 @@ def main():
         output_dir=args.output_dir,
         num_train_epochs=args.num_train_epochs,
         per_device_train_batch_size=args.per_device_train_batch_size,
-        save_strategy='no',
+        save_strategy='steps',
+        save_steps=args.eval_steps,
+        save_total_limit=1,
+        evaluation_strategy='steps',
         eval_steps=args.eval_steps,
         logging_steps=args.eval_steps,
         seed=args.seed,

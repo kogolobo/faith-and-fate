@@ -20,7 +20,7 @@ def create_cot_context(example, nshots=0, shot_bank=None):
         shots = random.sample(shot_bank, nshots) 
 
     shots_str = '\n'.join(shots) + '\n' if nshots > 0 else ''
-    example['context'] = f"{PREFIX}\n{shots_str}Question: {example['question']}\nAnswer: "
+    example['context'] = f"{PREFIX}\n{shots_str}Question: {example['question']}\nAnswer: Let's perform the multiplication step by step:\n\n"
     return example
 
 def load_data(data_dir: str, max_train_digits: int, seed: int = 42, nshots=0, shot_bank=None):

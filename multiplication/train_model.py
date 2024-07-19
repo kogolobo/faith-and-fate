@@ -4,6 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorForLan
 from transformers import Trainer, TrainingArguments
 from transformers.trainer_utils import set_seed
 from data_utils import load_data
+from datasets import load_from_disk
 
 def main():
     parser = ArgumentParser()
@@ -14,7 +15,7 @@ def main():
     parser.add_argument('--eval_steps', type=int, default=50)
     parser.add_argument('--learning_rate', type=float, default=5e-5)
     parser.add_argument('--max_train_digits', type=int, default=3)
-    parser.add_argument('--data_dir', type=str, default='multiplication/scratchpad')
+    parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
 
@@ -26,8 +27,9 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = 'left'
-    dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
-    
+    # dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
+    dataset = load_from_disk(args.data_dir)
+
     def tokenize_function(examples):
         return tokenizer(examples['text'], padding=False, truncation=True)
     

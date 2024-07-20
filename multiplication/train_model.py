@@ -12,7 +12,9 @@ def main():
     parser.add_argument('--output_dir', type=str, default='multiplication/best_model')
     parser.add_argument('--num_train_epochs', type=int, default=1)
     parser.add_argument('--per_device_train_batch_size', type=int, default=4)
-    parser.add_argument('--eval_steps', type=int, default=50)
+    parser.add_argument('--per_device_eval_batch_size', type=int, default=8)
+    parser.add_argument('--eval_steps', type=int, default=500)
+    parser.add_argument('--log_steps', type=int, default=50)
     parser.add_argument('--learning_rate', type=float, default=5e-5)
     parser.add_argument('--max_train_digits', type=int, default=3)
     parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
@@ -28,7 +30,7 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = 'left'
     # dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
-    dataset = load_from_disk(args.data_dir)
+    dataset = load_from_disk(args.data_dir).shuffle(seed=args.seed)
 
     def tokenize_function(examples):
         return tokenizer(examples['text'], padding=False, truncation=True)
@@ -39,12 +41,13 @@ def main():
         output_dir=args.output_dir,
         num_train_epochs=args.num_train_epochs,
         per_device_train_batch_size=args.per_device_train_batch_size,
+        per_device_eval_batch_size=args.per_device_eval_batch_size,
         save_strategy='steps',
         save_steps=args.eval_steps,
         save_total_limit=1,
         evaluation_strategy='steps',
         eval_steps=args.eval_steps,
-        logging_steps=args.eval_steps,
+        logging_steps=args.log_steps,
         seed=args.seed,
         do_train=True,
         learning_rate=args.learning_rate,

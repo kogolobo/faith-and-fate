@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import os
 import torch
 if torch.cuda.is_available():   
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -42,6 +43,7 @@ def main():
     parser.add_argument('--log_steps', type=int, default=50)
     parser.add_argument('--learning_rate', type=float, default=5e-5)
     parser.add_argument('--max_train_digits', type=int, default=3)
+    parser.add_argument('--max_memory_MB', type=int, default=20000)
     parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
@@ -59,7 +61,26 @@ def main():
     )
     torch_dtype = torch.bfloat16
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=compute_dtype, quantization_config=quantization_config, attn_implementation="flash_attention_2")
+    n_gpus = torch.cuda.device_count()
+    max_memory = f'{args.max_memory_MB}MB'
+    max_memory = {i: max_memory for i in range(n_gpus)}
+    device_map = "auto"
+
+    if os.environ.get('LOCAL_RANK') is not None:
+        local_rank = int(os.environ.get('LOCAL_RANK', '0'))
+        device_map = {'': local_rank}
+        max_memory = {'': max_memory[local_rank]}
+
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_name, 
+        torch_dtype=compute_dtype,
+        device_map=device_map,
+        max_memory=max_memory, 
+        quantization_config=quantization_config, 
+        attn_implementation="flash_attention_2"
+    )
+    setattr(model, 'model_parallel', True)
+    setattr(model, 'is_parallelizable', True)
     model.config.torch_dtype = compute_dtype
     model.config.use_cache = False
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
@@ -85,20 +106,25 @@ def main():
                     module = module.to(torch.bfloat16)
     
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_fast=True)
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = 'left'
     # dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
-    dataset = load_from_disk(args.data_dir).shuffle(seed=args.seed)
-
-    def tokenize_function(examples):
-        return tokenizer(examples['text'], padding=False, truncation=True)
-    
-    dataset = dataset.map(tokenize_function, batched=True)
+    tokenized_data_dir = args.data_dir + '_tokenized_' + args.model_name.replace('/', '_').replace('.', '_')
+    if os.path.exists(tokenized_data_dir):
+        dataset = load_from_disk(tokenized_data_dir)
+    else:
+        dataset = load_from_disk(args.data_dir).shuffle(seed=args.seed)
+        def tokenize_function(examples):
+            return tokenizer(examples['text'], padding=False, truncation=True)
+        
+        dataset = dataset.map(tokenize_function, batched=True)
+        dataset.save_to_disk(tokenized_data_dir)
 
     training_args = TrainingArguments(
+        run_name='hyak',
         output_dir=args.output_dir,
         num_train_epochs=args.num_train_epochs,
         per_device_train_batch_size=args.per_device_train_batch_size,
@@ -113,7 +139,9 @@ def main():
         do_train=True,
         learning_rate=args.learning_rate,
         load_best_model_at_end=True,
-        optim='paged_adamw_32bit'
+        optim='paged_adamw_32bit',
+        bf16=True,
+        bf16_full_eval=False
     )
 
     trainer = Trainer(

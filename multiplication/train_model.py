@@ -45,6 +45,10 @@ def main():
     parser.add_argument('--max_train_digits', type=int, default=3)
     parser.add_argument('--max_memory_MB', type=int, default=20000)
     parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
+    parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
+    parser.add_argument('--lora_r', type=int, default=4)
+    parser.add_argument('--lora_alpha', type=float, default=1)
+    parser.add_argument('--lora_dropout', type=float, default=0.05)
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
 
@@ -59,7 +63,6 @@ def main():
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4"
     )
-    torch_dtype = torch.bfloat16
 
     n_gpus = torch.cuda.device_count()
     max_memory = f'{args.max_memory_MB}MB'
@@ -85,12 +88,12 @@ def main():
     model.config.use_cache = False
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
-    modules = find_all_linear_names(args, model)
+    # modules = find_all_linear_names(args, model)
     lora_config = LoraConfig(
-        r=4,
-        lora_alpha=1,
-        target_modules=modules,
-        lora_dropout=0.1,
+        r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        target_modules="all-linear",
+        lora_dropout=args.lora_dropout,
         bias="none",
         task_type="CAUSAL_LM",
     )
@@ -141,7 +144,8 @@ def main():
         load_best_model_at_end=True,
         optim='paged_adamw_32bit',
         bf16=True,
-        bf16_full_eval=False
+        bf16_full_eval=False,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
     )
 
     trainer = Trainer(

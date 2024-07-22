@@ -6,6 +6,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
     parser.add_argument('--model_name_or_path', type=str, default='gpt2')
+    parser.add_argument('--num_proc', type=int, default=4)
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
 
@@ -14,7 +15,7 @@ def main():
     def tokenize_function(examples):
         return tokenizer(examples['text'], padding=False, truncation=True)
     
-    dataset = dataset.map(tokenize_function, batched=True)
+    dataset = dataset.map(tokenize_function, batched=True, num_proc=args.num_proc)
     dataset.save_to_disk(args.data_dir + '_tokenized_' + args.model_name_or_path.replace('/', '_').replace('.', '_'))
 
 if __name__ == '__main__':

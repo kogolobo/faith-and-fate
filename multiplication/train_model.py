@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import os
+import pprint
 import torch
 if torch.cuda.is_available():   
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -53,6 +54,8 @@ def main():
     args = parser.parse_args()
 
     set_seed(args.seed)
+
+    pprint.pprint(vars(args))
 
     compute_dtype = torch.bfloat16
     quantization_config = BitsAndBytesConfig(

@@ -2,6 +2,7 @@ from functools import partial
 import os
 import torch
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel, PeftConfig
 from transformers.trainer_utils import set_seed
 from transformers.pipelines.pt_utils import KeyDataset
 from datasets import load_from_disk
@@ -11,13 +12,14 @@ from tqdm import tqdm
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--model_name_or_path', type=str, default='gpt2')
-    parser.add_argument('--data_dir', type=str, default='multiplication/scratchpad')
-    parser.add_argument('--output_dir', type=str, default='multiplication/predictions')
+    parser.add_argument('--model_name_or_path', type=str, default='/gscratch/amath/kogolobo/faith-and-fate/multiplication/best_model_pythia/')
+    parser.add_argument('--data_dir', type=str, default='/gscratch/amath/kogolobo/faith-and-fate/multiplication/big_data/dataset')
+    parser.add_argument('--output_dir', type=str, default='multiplication/predictions_pythia')
     parser.add_argument('--max_length', type=int, default=1024)
-    parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--batch_size', type=int, default=4)
-    parser.add_argument('--max_memory_MB', type=int, default=12000)
+    parser.add_argument('--num_workers', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--max_memory_MB', type=int, default=80000)
+    parser.add_argument('--use_peft', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
 
@@ -33,7 +35,20 @@ def main():
         device_map = {'': local_rank}
         max_memory = {'': max_memory[local_rank]}
         
-    model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, device_map=device_map, max_memory=max_memory)
+    if args.use_peft:
+        peft_config = PeftConfig.from_pretrained(args.model_name_or_path)
+        base_model = AutoModelForCausalLM.from_pretrained(
+            peft_config.base_model_name_or_path, 
+            torch_dtype=torch.bfloat16,
+            device_map=device_map, 
+            max_memory=max_memory,
+            attn_implementation="flash_attention_2"
+        )
+        model = PeftModel.from_pretrained(model=base_model, model_id=args.model_name_or_path)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, device_map=device_map, max_memory=max_memory)
+    
+    model.eval()
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=True)
     tokenizer.padding_side = 'left'
     generator = pipeline('text-generation', model=model, tokenizer=tokenizer)

@@ -64,14 +64,16 @@ def main():
     validation_data = dataset['validation']
     validation_data = validation_data.map(create_shots)
     shot_bank = validation_data['shot']
-    dataset = dataset['test'].map(create_cot_context, nshots=1, shot_bank=shot_bank)
+    dataset = dataset['test'].map(create_cot_context, fn_kwargs={'nshots': 0, 'shot_bank': shot_bank})
     
     def tokenize_function(examples):
         return tokenizer(examples['context'], padding=False, truncation=True)
     dataset = dataset.map(tokenize_function, batched=True)
+    dataset = dataset.filter(lambda x: len(x['input_ids']) <= 500)
+    dataset.cleanup_cache_files()
 
     dataloader = DataLoader(
-        dataset['test'].select(range(50)),
+        dataset.select(range(50)),
         batch_size=args.batch_size, 
         collate_fn=collator, 
         shuffle=False 
@@ -97,7 +99,8 @@ def main():
             
             outputs = model.generate(input_ids, attention_mask=attention_mask, generation_config=generation_config, stopping_criteria=stopping_criteria)
             answers = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-            batch['answer'] = [answers[i].replace(batch['question'][i], '').strip() for i in range(len(answers))]
+            batch['answer'] = [answers[i].replace(batch['context'][i], '').strip() for i in range(len(answers))]
+            # batch['answer'] = answers
             generated_answers.extend(
                 [ {k: v[i] for k, v in batch.items()} for i in range(len(answers)) ]
             )

@@ -1,6 +1,7 @@
 import argparse
 import json
 import glob
+import pprint
 from statistics import mean
 from tqdm import tqdm
 import networkx as nx
@@ -13,23 +14,25 @@ import numpy as np
 
 def parse_generated_answer(generated_answer):
     skip = 0
-    regexes = [
-        r"= ((\d+[.,\s]*)+)\.?$",
-        r"equals to ((\d+[.,\s]*)+)\.?$",
-        r"is equal to ((\d+[.,\s]*)+)\.?$",
-        r"is ((\d+[.,\s]*)+)\.?$",
-        r"is simply ((\d+[.,\s]*)+)\.?$",
-        r"is simply ((\d+[.,\s]*)+),?",
-        r"equals ((\d+[.,\s]*)+)\.?$",
-    ]
-    gpt4_result = None
-    for regex in regexes:
-        m = re.search(regex, generated_answer)
-        if m:
-            result = m.group(1)
-            gpt4_result = int(result.replace(",", "").replace(" ", "").replace(".", ""))
-            break
+    # regexes = [
+    #     r"= ((\d+[.,\s]*)+)\.?$",
+    #     r"equals to ((\d+[.,\s]*)+)\.?$",
+    #     r"is equal to ((\d+[.,\s]*)+)\.?$",
+    #     r"is ((\d+[.,\s]*)+)\.?$",
+    #     r"is simply ((\d+[.,\s]*)+)\.?$",
+    #     r"is simply ((\d+[.,\s]*)+),?",
+    #     r"equals ((\d+[.,\s]*)+)\.?$",
+    # ]
+    # gpt4_result = None
+    # for regex in regexes:
+    #     m = re.search(regex, generated_answer)
+    #     if m:
+    #         result = m.group(1)
+    #         gpt4_result = int(result.replace(",", "").replace(" ", "").replace(".", ""))
+    #         break
 
+    result = re.search(r"= ((\d+[.,\s]*)+)\.", generated_answer.split("###", maxsplit=1)[0]).group(1)
+    gpt4_result = int(result.replace(",", "").replace(" ", "").replace(".", ""))
     return gpt4_result
 
 
@@ -191,6 +194,7 @@ def scratchpad_graph_analysis():
 
     node_stats_total, depth_dist = {}, {}
     accuracy_depth_total = defaultdict(list)
+    overall_accuracy = []
     for file in glob.glob(f'{args.scratchpad_folder}/*.json*'):
         print(file.split('/')[-1])
         name = '_'.join(file.split('/')[-1].split('_')[:3])
@@ -209,9 +213,9 @@ def scratchpad_graph_analysis():
         overall_stats = {}
         accuracy_depth = defaultdict(list)
         scratchpad_parsing_error = 0
-        for item in tqdm(data):
-            x, y = extract_numbers(item["question"])
-            generated_answer = item["answer"]
+        for idx, item in tqdm(enumerate(data), total=len(data), desc='Processing'):
+            x, y = extract_numbers(item["prompt"])
+            generated_answer = item["generated"].split("###", maxsplit=1)[0]
             if type(generated_answer) == list:
                 generated_answer = generated_answer[0]
             graph_from_input = build_scratchpad_v2_graph(x, y)
@@ -229,6 +233,7 @@ def scratchpad_graph_analysis():
             exp_interp = (width ** args.width_coef) * (longest_path ** args.depth_coef)
             average_parallelism = number_of_nodes/longest_path
             accuracy = compute_accuracy(x, y, generated_answer)
+            overall_accuracy.append(accuracy)
             accuracy_depth[average_parallelism].append(accuracy)
             accuracy_depth_total[average_parallelism].append(accuracy)
             for key, values in stats.items():
@@ -244,7 +249,7 @@ def scratchpad_graph_analysis():
             total_nodes = sum([values[t] for t in node_types])
             for t in node_types:
                 percent_stats[key][t] = values[t] / total_nodes
-        print(json.dumps(percent_stats))
+        pprint.pprint(percent_stats)
 
         for layer, values in overall_stats.items():
             if layer not in node_stats_total.keys():
@@ -267,7 +272,7 @@ def scratchpad_graph_analysis():
         total_nodes = sum([values[t] for t in node_types])
         for t in node_types:
             percent_stats_overall[key][t] = values[t] / total_nodes
-    print(json.dumps(percent_stats_overall))
+    pprint.pprint(percent_stats_overall)
 
     depth_sum1, depth_sum2 = {}, {}
     for name, depths in depth_dist.items():
@@ -275,7 +280,8 @@ def scratchpad_graph_analysis():
             continue
         depth_sum1[name] = (np.percentile(depths, 50), np.percentile(depths, 25), np.percentile(depths, 75))
         depth_sum2[name] = (mean(depths), mean(depths) - np.std(depths), mean(depths) + np.std(depths))
-    print(json.dumps(depth_sum2))
+    pprint.pprint(depth_sum2)
+    print(f"Overall accuracy: {np.mean(overall_accuracy)}")
 
 if __name__ == "__main__":
     scratchpad_graph_analysis()

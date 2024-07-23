@@ -44,7 +44,9 @@ def main():
         for split in datasets[0].keys()
     }).shuffle(seed=args.seed)
 
-    dataset = dataset.map(lambda example, idx: {
+    dataset = dataset.map(
+        lambda example, idx: 
+        {
             "id": idx, 
             "text": f"{PREFIX}\nQuestion: {example['prompt']}\nAnswer: Let's perform the multiplication step by step:\n\n{example['completion']}"
         }, with_indices=True)

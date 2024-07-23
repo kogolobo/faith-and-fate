@@ -36,7 +36,7 @@ def create_graph(x: int, y: int, generated_answer: str):
     pp = ""
     pp_nodes = []
     x_i, y_i = 0, 0
-    for line in lines:
+    for idx, line in enumerate(lines):
         line = line.strip()
         if not line:
             continue
@@ -139,8 +139,10 @@ def create_graph(x: int, y: int, generated_answer: str):
             x_i = 0
             y_i += 1
         elif line.startswith("Now, let's sum the "):
-            m = re.search(r"The final answer is ((\d+) x 10*( \+ )?)+ = ((\d+)( \+ )?)+ = (\d+)\.?$", line)
-            predicted_answer = int(m.groups()[-1])
+            m = re.search(r"= ((\d+[.,\s]*)+)\.", line.split("###", maxsplit=1)[0])
+            predicted_answer = m.group(1).replace(",", "").replace(" ", "").replace(".", "")
+            # m = re.search(r"The final answer is ((\d+) x 10*( \+ )?)+ = ((\d+)( \+ )?)+ = (\d+)\.?$", line)
+            # predicted_answer = int(m.groups()[-1])
             graph.add_node("final_output", type="output", value=predicted_answer, rank=0)
             for node in pp_nodes:
                 graph.add_edge(node, "final_output", operation="add")
@@ -173,9 +175,9 @@ def main():
         with open(args.scratchpad_file, "r") as f:
             data = [json.loads(line) for line in f if line.strip()]
 
-    for item in data:
-        x, y = extract_numbers(item["question"])
-        generated_answer = item["answer"]
+    for idx, item in enumerate(data):
+        x, y = extract_numbers(item["prompt"])
+        generated_answer = item["generated"]
         gold_answer = "Let's perform the multiplication step by step:\n\n" + generate_prompt(x, y)[0][:-4]
         # if isinstance(generated_answer, (list, tuple)):
             

@@ -14,25 +14,25 @@ import numpy as np
 
 def parse_generated_answer(generated_answer):
     skip = 0
-    # regexes = [
-    #     r"= ((\d+[.,\s]*)+)\.?$",
-    #     r"equals to ((\d+[.,\s]*)+)\.?$",
-    #     r"is equal to ((\d+[.,\s]*)+)\.?$",
-    #     r"is ((\d+[.,\s]*)+)\.?$",
-    #     r"is simply ((\d+[.,\s]*)+)\.?$",
-    #     r"is simply ((\d+[.,\s]*)+),?",
-    #     r"equals ((\d+[.,\s]*)+)\.?$",
-    # ]
-    # gpt4_result = None
-    # for regex in regexes:
-    #     m = re.search(regex, generated_answer)
-    #     if m:
-    #         result = m.group(1)
-    #         gpt4_result = int(result.replace(",", "").replace(" ", "").replace(".", ""))
-    #         break
+    regexes = [
+        r"= ((\d+[.,\s]*)+)\.?$",
+        # r"equals to ((\d+[.,\s]*)+)\.?$",
+        # r"is equal to ((\d+[.,\s]*)+)\.?$",
+        # r"is ((\d+[.,\s]*)+)\.?$",
+        # r"is simply ((\d+[.,\s]*)+)\.?$",
+        # r"is simply ((\d+[.,\s]*)+),?",
+        # r"equals ((\d+[.,\s]*)+)\.?$",
+    ]
+    gpt4_result = None
+    for regex in regexes:
+        m = re.search(regex, generated_answer)
+        if m:
+            result = m.group(1)
+            gpt4_result = int(result.split('\n', maxsplit=1)[0].replace(",", "").replace(" ", "").replace(".", ""))
+            break
 
-    result = re.search(r"= ((\d+[.,\s]*)+)\.", generated_answer.split("###", maxsplit=1)[0]).group(1)
-    gpt4_result = int(result.replace(",", "").replace(" ", "").replace(".", ""))
+    # result = re.search(r"= ((\d+[.,\s]*)+)\.?$", generated_answer).group(1)
+    # gpt4_result = int(result.replace(",", "").replace(" ", "").replace(".", ""))
     return gpt4_result
 
 

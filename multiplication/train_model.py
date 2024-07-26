@@ -19,6 +19,7 @@ from peft import (
     PeftModel
 )
 from peft.tuners.lora import LoraLayer
+from accelerate import Accelerator
 
 def find_all_linear_names(args, model):
     cls = bnb.nn.Linear4bit
@@ -47,6 +48,7 @@ def main():
     parser.add_argument('--max_memory_MB', type=int, default=20000)
     parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
+    parser.add_argument('--use_peft', action='store_true', default=False)
     parser.add_argument('--lora_r', type=int, default=4)
     parser.add_argument('--lora_alpha', type=float, default=1)
     parser.add_argument('--lora_dropout', type=float, default=0.05)
@@ -55,7 +57,9 @@ def main():
 
     set_seed(args.seed)
 
-    pprint.pprint(vars(args))
+    accelerator = Accelerator()
+    if accelerator.is_local_main_process:
+        pprint.pprint(vars(args))
 
     compute_dtype = torch.bfloat16
     quantization_config = BitsAndBytesConfig(

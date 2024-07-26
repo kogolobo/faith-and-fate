@@ -7,7 +7,7 @@ from transformers.trainer_utils import set_seed
 from transformers.pipelines.pt_utils import KeyDataset
 from datasets import load_from_disk
 from argparse import ArgumentParser
-from prepare_big_data import PREFIX
+from prepare_big_data import PROMPTS
 from tqdm import tqdm
 
 def main():
@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--max_memory_MB', type=int, default=80000)
     parser.add_argument('--use_peft', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--task', choices=['multiplication', 'dynamic_programming'], default='multiplication')
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -52,14 +53,15 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=True)
     tokenizer.padding_side = 'left'
     generator = pipeline('text-generation', model=model, tokenizer=tokenizer)
+
+    prefix, instruction = PROMPTS[args.task]['prefix'], PROMPTS[args.task]['instruction']
     dataset = load_from_disk(args.data_dir)['test'].map(
         lambda example:
         {
-            "context": f"{PREFIX}\nQuestion: {example['prompt']}\nAnswer: Let's perform the multiplication step by step:\n\n"
+            "context": f"{prefix}\nQuestion: {example['prompt']}\nAnswer: {instruction}\n\n"
         }, num_proc=args.num_workers
     )
-
-
+    
     pipe = partial(
         generator, 
         num_return_sequences=1, 

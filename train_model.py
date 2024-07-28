@@ -8,7 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorForLan
 
 from transformers import Trainer, TrainingArguments
 from transformers.trainer_utils import set_seed
-from data_utils import load_data
+
 from datasets import load_from_disk
 import bitsandbytes as bnb
 
@@ -121,7 +121,7 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = 'left'
-    # dataset = load_data(args.data_dir, args.max_train_digits, args.seed)
+    
     tokenized_data_dir = args.data_dir + '_tokenized_' + args.model_name.replace('/', '_').replace('.', '_')
     if os.path.exists(tokenized_data_dir):
         dataset = load_from_disk(tokenized_data_dir)

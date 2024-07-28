@@ -12,8 +12,8 @@
 
 #SBATCH --chdir=/mmfs1/home/kogolobo/repos/faith-and-fate/
 #SBATCH --export=all
-#SBATCH --output=mult_infer_log_mobile_llama.txt # where STDOUT goes
-#SBATCH --error=mult_infer_err_mobile_llama.txt # where STDERR goes
+#SBATCH --output=multiplication/mult_infer_log_mobile_llama.txt # where STDOUT goes
+#SBATCH --error=multiplication/mult_infer_err_mobile_llama.txt # where STDERR goes
 
 # Modules to use (optional).
 source /mmfs1/home/kogolobo/.bashrc

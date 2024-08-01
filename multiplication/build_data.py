@@ -7,6 +7,7 @@ import random
 from random import randrange
 from pathlib import Path
 import csv
+import numpy as np
 
 
 random.seed(0)
@@ -26,12 +27,19 @@ def cartesian(a_num_digit, b_num_digit):
     return inputs
 
 def sample(a_num_digit, b_num_digit, max_sequence):
-    inputs = set()
-    while len(inputs) < max_sequence:
-        a, b = random_n_digit(a_num_digit), random_n_digit(b_num_digit)
-        if (a, b) not in inputs:
-            inputs.add((a, b))
-    return list(inputs)
+    a_range = np.arange(int(math.pow(10, a_num_digit - 1)), int(math.pow(10, a_num_digit)))
+    b_range = np.arange(int(math.pow(10, b_num_digit - 1)), int(math.pow(10, b_num_digit)))
+
+    a_cnt = len(a_range)
+    b_cnt = len(b_range)
+    total_pairs = a_cnt * b_cnt
+
+    if total_pairs <= max_sequence:
+        return list(itertools.product(a_range, b_range))
+    else:
+        sample_indices = np.random.choice(total_pairs, size=max_sequence, replace=False)
+        inputs = [(a_range[i // b_cnt], b_range[i % b_cnt]) for i in sample_indices]
+        return inputs
 
 
 def count_tokens_per_example(gpt2_tokenizer, example):
@@ -79,14 +87,10 @@ def main():
         for b_num_digit in tqdm(digits[:a_num_digit]):
             openai_fine_tune = []
             name = f'{a_num_digit}_by_{b_num_digit}'
-            num_combination = math.pow(10, a_num_digit + b_num_digit)
             if args.format == "jsonl":
                 output_file = output_dir / f'{name}_digit_fine_tune.jsonl'
                 with open(output_file, "w") as f:
-                    if num_combination < args.max_sequence:
-                        inputs = cartesian(a_num_digit, b_num_digit)
-                    else:
-                        inputs = sample(a_num_digit, b_num_digit, args.max_sequence)
+                    inputs = sample(a_num_digit, b_num_digit, args.max_sequence)
                     for numbers in tqdm(inputs, desc=name):
                         target = numbers[0] * numbers[1]
                         p1 = f'What is {numbers[0]} times {numbers[1]}?\n\n###\n\n'

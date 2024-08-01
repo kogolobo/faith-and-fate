@@ -47,6 +47,7 @@ def main():
     parser.add_argument('--max_train_digits', type=int, default=3)
     parser.add_argument('--max_memory_MB', type=int, default=20000)
     parser.add_argument('--data_dir', type=str, default='multiplication/big_data/dataset')
+    parser.add_argument('--use_scratchpad', action='store_true', default=False)
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
     parser.add_argument('--use_peft', action='store_true', default=False)
     parser.add_argument('--lora_r', type=int, default=4)
@@ -122,16 +123,17 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = 'left'
     
-    tokenized_data_dir = args.data_dir + '_tokenized_' + args.model_name.replace('/', '_').replace('.', '_')
-    if os.path.exists(tokenized_data_dir):
-        dataset = load_from_disk(tokenized_data_dir)
-    else:
-        dataset = load_from_disk(args.data_dir).shuffle(seed=args.seed)
-        def tokenize_function(examples):
-            return tokenizer(examples['text'], padding=False, truncation=True)
-        
-        dataset = dataset.map(tokenize_function, batched=True)
-        dataset.save_to_disk(tokenized_data_dir)
+    dataset = load_from_disk(args.data_dir)
+    used_key_prefix = 'scratchpad' if args.use_scratchpad else 'answer'
+    unused_key_prefix = 'answer' if args.use_scratchpad else 'scratchpad'
+    train_data = dataset['train']\
+                .rename_column(f'{used_key_prefix}_input_ids', 'input_ids')\
+                .rename_column(f'{used_key_prefix}_attention_mask', 'attention_mask')\
+                .remove_columns([f'{unused_key_prefix}_input_ids', f'{unused_key_prefix}_attention_mask'])
+    validation_data = dataset['validation']\
+                .rename_column(f'{used_key_prefix}_input_ids', 'input_ids')\
+                .rename_column(f'{used_key_prefix}_attention_mask', 'attention_mask')\
+                .remove_columns([f'{unused_key_prefix}_input_ids', f'{unused_key_prefix}_attention_mask'])
 
     training_args = TrainingArguments(
         run_name='hyak',
@@ -158,8 +160,8 @@ def main():
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=dataset['train'],
-        eval_dataset=dataset['validation'],
+        train_dataset=train_data,
+        eval_dataset=validation_data,
         data_collator=collator
     )
 

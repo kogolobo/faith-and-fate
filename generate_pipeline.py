@@ -9,11 +9,57 @@ from datasets import load_from_disk
 from argparse import ArgumentParser
 from prepare_big_data import PROMPTS
 from tqdm import tqdm
+import numpy as np
+
+PROMPTS = {
+    'multiplication': {
+        'prefix': 'I am a highly intelligent bot answering math questions.',
+        'instruction': "Let's perform the multiplication step by step:"
+    },
+    'dynamic_programming': {
+        'prefix': 'I am a highly intelligent bot solving logic puzzles.',
+        'instruction': "We will solve any task instance by using dynamic programming. We define dp[i] as the maximum sum of a subsequence that does not include adjacent elements, when considering only the elements of the input from the i-th position onwards."
+    }
+}
+
+def create_context(
+        dataset, 
+        validation_dataset, 
+        prefix, 
+        instruction, 
+        use_scratchpad: bool = False, 
+        nshots=5, 
+        num_proc=4
+):
+    def craft_prompt(example) -> str:
+        answer_key = 'completion' if not use_scratchpad else 'scratchpad'
+        instruction_str = instruction + "\n\n" if use_scratchpad else ""
+        if nshots > 0:
+            few_shot_idx = np.random.choice(len(validation_dataset), nshots, replace=False)
+            few_shots = validation_dataset.select(few_shot_idx)
+            postfix = " ###" if not use_scratchpad else ""
+            few_shot_str = "\n".join([
+                f"Question: {demo['prompt']}\nAnswer: {instruction_str}{demo[answer_key]}{postfix}"
+                for demo in few_shots
+            ]) + "\n\n"
+        else:
+            few_shot_str = ""
+        return f"{prefix}\n{few_shot_str}Question: {example['prompt']}\nAnswer: {instruction_str}"
+
+    
+    return dataset.map(
+        lambda example: {
+            'context': craft_prompt(example)
+        }, num_proc=num_proc
+    )
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--model_name_or_path', type=str, default='/gscratch/amath/kogolobo/faith-and-fate/multiplication/best_model_pythia/')
+    parser.add_argument('--model_name_or_path', type=str, default='/gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/best_model_pythia/')
     parser.add_argument('--data_dir', type=str, default='/gscratch/amath/kogolobo/faith-and-fate/multiplication/big_data/dataset')
+    parser.add_argument('--use_ood', action='store_true', default=False)
+    parser.add_argument('--use_scratchpad', action='store_true', default=False)
+    parser.add_argument('--nshots', type=int, default=0)
     parser.add_argument('--output_dir', type=str, default='multiplication/predictions_pythia')
     parser.add_argument('--max_length', type=int, default=1024)
     parser.add_argument('--num_workers', type=int, default=8)
@@ -52,16 +98,29 @@ def main():
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=True)
     tokenizer.padding_side = 'left'
+    if not tokenizer.pad_token_id:
+        if model.config.pad_token_id is not None:
+            tokenizer.pad_token_id = model.config.pad_token_id
+        else: 
+            tokenizer.pad_token_id = model.config.eos_token_id
+            
     generator = pipeline('text-generation', model=model, tokenizer=tokenizer)
 
     prefix, instruction = PROMPTS[args.task]['prefix'], PROMPTS[args.task]['instruction']
-    dataset = load_from_disk(args.data_dir)['test'].map(
-        lambda example:
-        {
-            "context": f"{prefix}\nQuestion: {example['prompt']}\nAnswer: {instruction}\n\n"
-        }, num_proc=args.num_workers
+
+    dataset = load_from_disk(args.data_dir)
+    split = 'ood' if args.use_ood else 'test'
+    dataset = create_context(
+        dataset[split], 
+        dataset['validation'], 
+        prefix, 
+        instruction, 
+        use_scratchpad=args.use_scratchpad, 
+        nshots=args.nshots, 
+        num_proc=args.num_workers
     )
-    
+    print(f"First data example: {dataset['context'][0]}")
+
     pipe = partial(
         generator, 
         num_return_sequences=1, 

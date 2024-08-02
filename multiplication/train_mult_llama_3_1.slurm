@@ -8,7 +8,7 @@
 #SBATCH --mem=100GB
 #SBATCH --gpus=2
 #SBATCH --cpus-per-gpu=6
-#SBATCH --time=100:00:00 # Max runtime in DD-HH:MM:SS format.
+#SBATCH --time=250:00:00 # Max runtime in DD-HH:MM:SS format.
 
 #SBATCH --chdir=/mmfs1/home/kogolobo/repos/faith-and-fate/
 #SBATCH --export=all
@@ -42,27 +42,27 @@ python generate_pipeline.py \
     --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_llama_3_1 \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_answers_llama_3_1 \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_answers_llama_3_1 \
     --task multiplication \
     --nshots 0 \
     --use_peft \
-    --max_length 4096 \
+    --max_new_tokens 20 \
     --num_workers 12 \
-    --batch_size 64 \
+    --batch_size 8 \
     --seed 42
 
 python generate_pipeline.py \
-    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_ood_llama_3_1 \
+    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_llama_3_1 \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_answers_llama_3_1 \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_answers_ood_llama_3_1 \
     --task multiplication \
     --nshots 0 \
     --use_ood \
     --use_peft \
-    --max_length 4096 \
+    --max_new_tokens 20 \
     --num_workers 12 \
-    --batch_size 32 \
+    --batch_size 8 \
     --seed 42
 
 OMP_NUM_THREADS=4 accelerate launch --use_deepspeed --mixed_precision bf16 train_model.py \
@@ -88,21 +88,21 @@ python generate_pipeline.py \
     --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/scratchpad_llama_3_1 \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_scratchpad_llama_3_1 \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_scratchpad_llama_3_1 \
     --task multiplication \
     --use_scratchpad \
     --nshots 0 \
     --use_peft \
     --max_length 4096 \
     --num_workers 12 \
-    --batch_size 32 \
+    --batch_size 8 \
     --seed 42
 
 python generate_pipeline.py \
-    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/scratchpad_ood_llama_3_1 \
+    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/scratchpad_llama_3_1 \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_scratchpad_llama_3_1 \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_scratchpad_ood_llama_3_1 \
     --task multiplication \
     --use_scratchpad \
     --nshots 0 \
@@ -110,5 +110,5 @@ python generate_pipeline.py \
     --use_peft \
     --max_length 4096 \
     --num_workers 12 \
-    --batch_size 32 \
+    --batch_size 8 \
     --seed 42

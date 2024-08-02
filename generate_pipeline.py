@@ -62,6 +62,7 @@ def main():
     parser.add_argument('--nshots', type=int, default=0)
     parser.add_argument('--output_dir', type=str, default='multiplication/predictions_pythia')
     parser.add_argument('--max_length', type=int, default=1024)
+    parser.add_argument('--max_new_tokens', type=int, default=-1)
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_memory_MB', type=int, default=80000)
@@ -121,15 +122,21 @@ def main():
     )
     print(f"First data example: {dataset['context'][0]}")
 
-    pipe = partial(
-        generator, 
-        num_return_sequences=1, 
-        truncation=True, 
-        return_full_text=False,
-        max_length=args.max_length, 
-        num_workers=args.num_workers,
-        batch_size=args.batch_size
-    )
+    generaion_kwargs = {
+        'num_return_sequences': 1,
+        'truncation': True,
+        'return_full_text': False,
+        'num_workers': args.num_workers,
+        'batch_size': args.batch_size
+    }
+
+    if args.max_new_tokens > 0:
+        generaion_kwargs['max_new_tokens'] = args.max_new_tokens
+    else:
+        generaion_kwargs['max_length'] = args.max_length
+
+    pipe = partial(generator, **generaion_kwargs)
+    
     generated_text = []
     for result in tqdm(pipe(KeyDataset(dataset, key='context')), total=len(dataset), desc='Generating'):
         generated_text.extend([res['generated_text'] for res in result])

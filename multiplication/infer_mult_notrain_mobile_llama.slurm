@@ -8,7 +8,7 @@
 #SBATCH --mem=100GB
 #SBATCH --gpus=2
 #SBATCH --cpus-per-gpu=8
-#SBATCH --time=100:00:00 # Max runtime in DD-HH:MM:SS format.
+#SBATCH --time=250:00:00 # Max runtime in DD-HH:MM:SS format.
 
 #SBATCH --chdir=/mmfs1/home/kogolobo/repos/faith-and-fate/
 #SBATCH --export=all
@@ -24,102 +24,75 @@ python generate_pipeline.py \
     --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 40000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/0shot_answers_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/0shot_answers_mobile_llama \
     --task multiplication \
     --nshots 0 \
-    --max_length 2048 \
+    --max_new_tokens 20 \
     --num_workers 16 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
     --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 40000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/0shot_ood_answers_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/0shot_ood_answers_mobile_llama \
     --task multiplication \
     --nshots 0 \
     --use_ood \
-    --max_length 2048 \
+    --max_new_tokens 20 \
     --num_workers 16 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
     --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 40000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/0shot_scratchpads_mobile_llama \
-    --task multiplication \
-    --use_scratchpad \
-    --nshots 0 \
-    --max_length 2048 \
-    --num_workers 16 \
-    --batch_size 128 \
-    --seed 42
-
-python generate_pipeline.py \
-    --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
-    --max_memory_MB 40000 \
-    --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/0shot_ood_scratchpads_mobile_llama \
-    --task multiplication \
-    --use_scratchpad \
-    --nshots 0 \
-    --use_ood \
-    --max_length 2048 \
-    --num_workers 16 \
-    --batch_size 128 \
-    --seed 42
-
-python generate_pipeline.py \
-    --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
-    --max_memory_MB 40000 \
-    --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/5shot_answers_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/5shot_answers_mobile_llama \
     --task multiplication \
     --nshots 5 \
-    --max_length 2048 \
+    --max_new_tokens 20 \
     --num_workers 16 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
     --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 40000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/5shot_ood_answers_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/5shot_ood_answers_mobile_llama \
     --task multiplication \
     --nshots 5 \
     --use_ood \
-    --max_length 2048 \
+    --max_new_tokens 20 \
     --num_workers 16 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
     --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 40000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/3shot_scratchpads_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/2shot_scratchpads_mobile_llama \
     --task multiplication \
     --use_scratchpad \
-    --nshots 3 \
+    --nshots 2 \
     --max_length 2048 \
     --num_workers 16 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
     --model_name_or_path mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 40000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/3shot_ood_scratchpads_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/2shot_ood_scratchpads_mobile_llama \
     --task multiplication \
     --use_scratchpad \
-    --nshots 3 \
+    --nshots 2 \
     --use_ood \
     --max_length 2048 \
     --num_workers 16 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42

@@ -8,7 +8,7 @@
 #SBATCH --mem=100GB
 #SBATCH --gpus=2
 #SBATCH --cpus-per-gpu=6
-#SBATCH --time=100:00:00 # Max runtime in DD-HH:MM:SS format.
+#SBATCH --time=250:00:00 # Max runtime in DD-HH:MM:SS format.
 
 #SBATCH --chdir=/mmfs1/home/kogolobo/repos/faith-and-fate/
 #SBATCH --export=all
@@ -24,15 +24,15 @@ OMP_NUM_THREADS=4 accelerate launch --use_deepspeed --mixed_precision bf16 train
     --model_name mtgv/MobileLLaMA-1.4B-Base \
     --max_memory_MB 80000 \
     --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_mobile_llama \
-    --num_train_epochs 1 \
-    --per_device_train_batch_size 128 \
-    --per_device_eval_batch_size 128 \
+    --num_train_epochs 3 \
+    --per_device_train_batch_size 256 \
+    --per_device_eval_batch_size 256 \
     --eval_steps 500 \
     --log_steps 50 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset_tokenized_mtgv_MobileLLaMA-1_4B-Base \
     --seed 42 \
     --gradient_accumulation_steps 4 \
-    --learning_rate 0.0003 \
+    --learning_rate 0.0005 \
     --lora_alpha 16 \
     --lora_r 16 \
     --lora_dropout 0.1
@@ -41,25 +41,25 @@ python generate_pipeline.py \
     --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_mobile_llama \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_answers_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_answers_mobile_llama \
     --task multiplication \
     --nshots 0 \
-    --max_length 2048 \
+    --max_new_tokens 20 \
     --num_workers 12 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
-    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_ood_mobile_llama \
+    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/answer_mobile_llama \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_answers_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_answers_ood_mobile_llama \
     --task multiplication \
     --nshots 0 \
     --use_ood \
-    --max_length 2048 \
+    --max_new_tokens 20 \
     --num_workers 12 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 OMP_NUM_THREADS=4 accelerate launch --use_deepspeed --mixed_precision bf16 train_model.py \
@@ -84,25 +84,25 @@ python generate_pipeline.py \
     --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/scratchpad_mobile_llama \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_scratchpad_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_scratchpad_mobile_llama \
     --task multiplication \
     --use_scratchpad \
     --nshots 0 \
     --max_length 2048 \
     --num_workers 12 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42
 
 python generate_pipeline.py \
-    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/scratchpad_ood_mobile_llama \
+    --model_name_or_path /gscratch/amath/kogolobo/faith-and-fate/multiplication/models/scratchpad_mobile_llama \
     --max_memory_MB 80000 \
     --data_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication_repro/dataset \
-    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/ft_scratchpad_mobile_llama \
+    --output_dir /gscratch/amath/kogolobo/faith-and-fate/multiplication/predictions/ft_scratchpad_ood_mobile_llama \
     --task multiplication \
     --use_scratchpad \
     --nshots 0 \
     --use_ood \
     --max_length 2048 \
     --num_workers 12 \
-    --batch_size 128 \
+    --batch_size 32 \
     --seed 42

@@ -198,9 +198,9 @@ def scratchpad_graph_analysis():
         accuracy_depth = defaultdict(list)
         scratchpad_parsing_error = 0
         for item in tqdm(data):
-            input_list = extract_input(item["question"])
-            gold_answer = item["gold answer"]
-            generated_answer = item["GPT3 answer"]
+            input_list = extract_input(item["prompt"])
+            gold_answer = item["completion"]
+            generated_answer = item["generated"].split("###", maxsplit=1)[0]
 
             correct_output = extract_output(gold_answer)
             graph_from_input = create_graph(input_list, gold_answer, print_graph=False)

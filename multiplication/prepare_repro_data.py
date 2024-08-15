@@ -93,6 +93,7 @@ def main():
         split : concatenate_datasets([dataset[split] for dataset in datasets]) 
         for split in datasets[0].keys()
     }).shuffle(seed=args.seed)
+    dataset['ood'] = concatenate_datasets(test_datasets_ood).shuffle(seed=args.seed)
 
     # dataset['train'] = remove_test_numbers(dataset['train'], dataset['test'], num_proc=args.num_proc)
     dataset = dataset.map(
@@ -102,9 +103,8 @@ def main():
             "answer_text": f"{prefix}\nQuestion: {example['prompt']}\nAnswer: {example['completion']} ###",
             "scratchpad_text": f"{prefix}\nQuestion: {example['prompt']}\nAnswer: {instruction}\n\n{example['scratchpad']}"
         }, with_indices=True, num_proc=args.num_proc)
-    dataset['ood'] = concatenate_datasets(test_datasets_ood).shuffle(seed=args.seed)
+    
     dataset.save_to_disk(args.output_dir)
-
     print("Data size: ", len(dataset['train']), len(dataset['validation']), len(dataset['test']), len(dataset['ood']))
 
 
